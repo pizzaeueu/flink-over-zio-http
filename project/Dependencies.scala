@@ -7,6 +7,7 @@ object VersionOf {
   val `slf4j-api` = "2.0.17"
   val logback = "1.5.18"
   val `zio-config` = "4.0.4"
+  val `zio-schema` = "1.6.6"
 
 }
 object ZIO {
@@ -18,6 +19,7 @@ object ZIO {
     "dev.zio" %% "zio-config-magnolia" % VersionOf.`zio-config`
   val zioConfigTypesafe =
     "dev.zio" %% "zio-config-typesafe" % VersionOf.`zio-config`
+  val zioSchema = "dev.zio" %% "zio-schema" % VersionOf.`zio-schema`
 
   val all: Seq[ModuleID] = Seq(
     zioCore,
@@ -25,7 +27,8 @@ object ZIO {
     zioHttp,
     zioConfig,
     zioConfigMagnolia,
-    zioConfigTypesafe
+    zioConfigTypesafe,
+    zioSchema
   )
 }
 

@@ -15,7 +15,7 @@ final case class FlinkRoutesLive(service: FlinkSqlService) extends FlinkRoutes {
       Method.GET / Root -> handler(
         service
           .runSql("")
-          .map(sessionId => Response.text(sessionId))
+          .map(statementStatus => Response.text(statementStatus.toJsonPretty))
           .onError(err => ZIO.logError(err.prettyPrint))
           .orDie
       )
