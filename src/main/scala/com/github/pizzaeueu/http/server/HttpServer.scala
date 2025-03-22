@@ -1,5 +1,6 @@
-package com.github.pizzaeueu.http
+package com.github.pizzaeueu.http.server
 
+import com.github.pizzaeueu.http.server.routes.FlinkRoutes
 import zio.http.Server
 import zio.{URIO, ZLayer}
 
