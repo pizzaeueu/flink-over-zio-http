@@ -6,15 +6,27 @@ object VersionOf {
   val `zio-json` = "0.7.39"
   val `slf4j-api` = "2.0.17"
   val logback = "1.5.18"
+  val `zio-config` = "4.0.4"
 
 }
 object ZIO {
   val zioCore = "dev.zio" %% "zio" % VersionOf.zio
-  val zioStreams = "dev.zio" %% "zio-streams" % VersionOf.zio
   val zioJson = "dev.zio" %% "zio-json" % VersionOf.`zio-json`
   val zioHttp = "dev.zio" %% "zio-http" % VersionOf.`zio-http`
+  val zioConfig = "dev.zio" %% "zio-config" % VersionOf.`zio-config`
+  val zioConfigMagnolia =
+    "dev.zio" %% "zio-config-magnolia" % VersionOf.`zio-config`
+  val zioConfigTypesafe =
+    "dev.zio" %% "zio-config-typesafe" % VersionOf.`zio-config`
 
-  val all: Seq[ModuleID] = Seq(zioCore, zioStreams, zioJson, zioHttp)
+  val all: Seq[ModuleID] = Seq(
+    zioCore,
+    zioJson,
+    zioHttp,
+    zioConfig,
+    zioConfigMagnolia,
+    zioConfigTypesafe
+  )
 }
 
 object Logging {
