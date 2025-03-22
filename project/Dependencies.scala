@@ -31,7 +31,7 @@ object ZIO {
 
 object Logging {
   val slf4jApi = "org.slf4j" % "slf4j-api" % VersionOf.`slf4j-api`
-  val logback = "ch.qos.logback" % "logback-classic" % "1.5.18"
+  val logback = "ch.qos.logback" % "logback-classic" % VersionOf.logback
 
   val all: Seq[ModuleID] = Seq(slf4jApi, logback)
 }

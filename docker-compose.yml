@@ -2,17 +2,48 @@ version: '3.8'
 
 services:
   jobmanager:
-    image: flink:latest
+    image: flink:1.18
     container_name: flink-jobmanager
     ports:
       - "8081:8081"
     environment:
-      - JOB_MANAGER_RPC_ADDRESS=jobmanager
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        jobmanager.bind-host: 0.0.0.0
+        jobmanager.memory.process.size: 1600m
+        rest.bind-address: 0.0.0.0
+        rest.address: jobmanager
     command: jobmanager
 
   taskmanager:
-    image: flink:latest
+    image: flink:1.18
     container_name: flink-taskmanager
+    depends_on:
+      - jobmanager
     environment:
-      - JOB_MANAGER_RPC_ADDRESS=jobmanager
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        taskmanager.memory.process.size: 1728m
+        taskmanager.numberOfTaskSlots: 2
     command: taskmanager
+
+  sql-gateway:
+    image: flink:1.18
+    container_name: flink-sql-gateway
+    depends_on:
+      - jobmanager
+    ports:
+      - "8083:8083"
+    environment:
+      - |
+        FLINK_PROPERTIES=
+        jobmanager.rpc.address: jobmanager
+        rest.address: jobmanager
+        execution.runtime-mode: streaming
+        table.dml-sync: true
+        sql-gateway.endpoint.rest.address: 0.0.0.0
+        sql-gateway.endpoint.rest.port: 8083
+    command: >
+      bash -c "/opt/flink/bin/sql-gateway.sh start-foreground"
