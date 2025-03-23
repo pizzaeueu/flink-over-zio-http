@@ -17,7 +17,7 @@ object Main extends ZIOAppDefault {
           HttpServerLive.live,
           FlinkRoutesLive.live,
           StaticRoutes.live,
-          Server.default,
+          Server.defaultWithPort(config.server.port),
           FlinkSqlClient.live,
           FlinkSqlService.live,
           ZLayer.succeed(config),

@@ -1,5 +1,4 @@
 ThisBuild / version := "0.1.0-SNAPSHOT"
-
 ThisBuild / scalaVersion := "2.13.16"
 
 lazy val root = (project in file("."))
@@ -8,6 +7,9 @@ lazy val root = (project in file("."))
   )
   .settings(
     libraryDependencies ++= ZIO.all ++ Logging.all
+  )
+  .settings(
+    assembly / assemblyMergeStrategy := (_ => MergeStrategy.first)
   )
 
 addCommandAlias("fmt", "scalafmtSbt; scalafmtAll;")
