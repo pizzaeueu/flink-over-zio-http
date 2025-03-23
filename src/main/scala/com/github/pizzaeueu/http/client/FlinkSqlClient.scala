@@ -2,16 +2,28 @@ package com.github.pizzaeueu.http.client
 
 import com.github.pizzaeueu.codec.FlinkCodec
 import com.github.pizzaeueu.config.AppConfig
-import com.github.pizzaeueu.domain.{CreateStatement, Session, Statement, StatementStatus}
+import com.github.pizzaeueu.domain.{
+  CreateStatement,
+  Session,
+  Statement,
+  StatementStatus
+}
 import zio._
 import zio.http._
-import zio.json.ast.Json
+import zio.json._
+import zio.json.ast.Json.Arr
+import zio.json.ast.{Json, JsonCursor}
 import zio.schema.codec.JsonCodec._
+
+import scala.language.postfixOps
 
 trait FlinkSqlClient {
   def createSession: Task[Session]
-  def createStatement(sessionId: Session): Task[Statement]
-  def getStatementStatus(session: Session, statement: Statement): Task[StatementStatus]
+  def createStatement(sessionId: Session, query: String): Task[Statement]
+  def getStatementStatus(
+      session: Session,
+      statement: Statement
+  ): Task[StatementStatus]
 
   def getQueryResult(session: Session, statement: Statement): Task[Json]
 }
@@ -31,21 +43,27 @@ case class FlinkSqlClientLive(config: AppConfig, client: Client)
     } yield data
   }
 
-  override def createStatement(session: Session): Task[Statement] = {
+  override def createStatement(
+      session: Session,
+      query: String
+  ): Task[Statement] = {
     for {
       url <- ZIO.fromEither(
         URL.decode(
           s"${config.flink.host}:${config.flink.port}/v1/sessions/${session.sessionHandle}/statements"
         )
       )
-      createStatement = CreateStatement("SELECT CURRENT_TIMESTAMP;")
+      createStatement = CreateStatement(query)
       res <- client.batched(Request.post(url, Body.from(createStatement)))
       statement <- res.body.to[Statement]
       _ <- ZIO.logInfo(s"Statement is created - $statement")
     } yield statement
   }
 
-  override def getStatementStatus(session: Session, statement: Statement): Task[StatementStatus] = for {
+  override def getStatementStatus(
+      session: Session,
+      statement: Statement
+  ): Task[StatementStatus] = for {
     url <- ZIO.fromEither(
       URL.decode(
         s"${config.flink.host}:${config.flink.port}/v1/sessions/${session.sessionHandle}/operations/${statement.operationHandle}/status"
@@ -53,19 +71,58 @@ case class FlinkSqlClientLive(config: AppConfig, client: Client)
     )
     res <- client.batched(Request.get(url))
     data <- res.body.to[StatementStatus]
-    _ <- ZIO.logInfo(s"Status of ${statement.operationHandle} statement is ${data.status}")
+    _ <- ZIO.logInfo(
+      s"Status of ${statement.operationHandle} statement is ${data.status}"
+    )
   } yield data
 
-  override def getQueryResult(session: Session, statement: Statement): Task[Json] = for {
-    url <- ZIO.fromEither(
-      URL.decode(
-        s"${config.flink.host}:${config.flink.port}/v1/sessions/${session.sessionHandle}/operations/${statement.operationHandle}/result/0"
+  override def getQueryResult(
+      session: Session,
+      statement: Statement
+  ): Task[Json] = {
+
+    // TODO: Rewrite to stack safe ( tail ) recursive call
+    def loop(
+        partition: Int,
+        jsonAcc: Arr
+    ): Task[Json] = {
+      for {
+        json <- loadPartition(session, statement, partition)
+        resultArray = Arr(jsonAcc.elements :+ json)
+        nextUri = json.get(JsonCursor.field("nextResultUri").isString)
+        res <- nextUri match {
+          case Left(_) => ZIO.succeed(resultArray)
+          case Right(_) =>
+            ZIO.sleep(50 milliseconds) *> loop(
+              partition + 1,
+              resultArray
+            )
+        }
+      } yield res
+    }
+    for {
+      jsonResult <- loop(0, Json.Arr.empty)
+      _ <- ZIO.logInfo(
+        s"Result of ${statement.operationHandle} statement is ${jsonResult.toJsonPretty}"
       )
-    )
-    res <- client.batched(Request.get(url))
-    data <- res.body.to[Json]
-    _ <- ZIO.logInfo(s"Result of ${statement.operationHandle} statement is ${data.toJsonPretty}")
-  } yield data
+    } yield jsonResult
+  }
+
+  private def loadPartition(
+      session: Session,
+      statement: Statement,
+      partition: Int
+  ): Task[Json] = {
+    for {
+      url <- ZIO.fromEither(
+        URL.decode(
+          s"${config.flink.host}:${config.flink.port}/v1/sessions/${session.sessionHandle}/operations/${statement.operationHandle}/result/$partition"
+        )
+      )
+      res <- client.batched(Request.get(url))
+      json <- res.body.to[Json]
+    } yield json
+  }
 }
 
 object FlinkSqlClient {

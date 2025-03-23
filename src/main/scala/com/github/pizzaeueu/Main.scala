@@ -2,7 +2,7 @@ package com.github.pizzaeueu
 
 import com.github.pizzaeueu.config.Configuration
 import com.github.pizzaeueu.http.client.FlinkSqlClient
-import com.github.pizzaeueu.http.server.routes.FlinkRoutesLive
+import com.github.pizzaeueu.http.server.routes.{FlinkRoutesLive, StaticRoutes}
 import com.github.pizzaeueu.http.server.{HttpServer, HttpServerLive}
 import com.github.pizzaeueu.service.FlinkSqlService
 import zio.http.{Client, Server}
@@ -16,6 +16,7 @@ object Main extends ZIOAppDefault {
         .provide(
           HttpServerLive.live,
           FlinkRoutesLive.live,
+          StaticRoutes.live,
           Server.default,
           FlinkSqlClient.live,
           FlinkSqlService.live,

@@ -14,7 +14,7 @@ case class FlinkSqlServiceLive(flinkClient: FlinkSqlClient)
 
   override def runSql(sql: String): Task[Json] = for {
     session <- flinkClient.createSession
-    statement <- flinkClient.createStatement(session)
+    statement <- flinkClient.createStatement(session, sql)
     statementStatus <- pingUntilFlinkQuerySucceed(session, statement)
     _ <- failIfFlinkQueryNotSucceed(statementStatus, session, statement)
     queryResult <- flinkClient.getQueryResult(session, statement)

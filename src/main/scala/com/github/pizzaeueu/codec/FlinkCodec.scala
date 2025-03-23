@@ -1,11 +1,6 @@
 package com.github.pizzaeueu.codec
 
-import com.github.pizzaeueu.domain.{
-  CreateStatement,
-  Session,
-  Statement,
-  StatementStatus
-}
+import com.github.pizzaeueu.domain._
 import zio.schema.{DeriveSchema, Schema}
 
 trait FlinkCodec {

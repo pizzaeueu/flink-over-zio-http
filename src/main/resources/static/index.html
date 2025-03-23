@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Run SQL over Flink</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <style>
+        #serverResponse {
+          max-height: 300px;
+          overflow-y: auto;
+        }
+        #loadingSpinner {
+          display: none;
+        }
+    </style>
+</head>
+<body>
+<div class="container mt-5">
+    <h1 class="mb-4">Run SQL over Flink</h1>
+    <div class="form-group">
+        <label for="userInput">Write valid SQL query</label>
+        <input type="text" id="userInput" class="form-control" placeholder="sql query">
+    </div>
+    <button id="sendBtn" class="btn btn-primary">Run SQL</button>
+
+    <div id="loadingSpinner" class="text-center my-3">
+        <div class="spinner-border" role="status">
+            <span class="sr-only">Loading...</span>
+        </div>
+    </div>
+
+    <div class="mt-4">
+        <h4>Server Response:</h4>
+        <pre id="serverResponse" class="border p-3 bg-light"></pre>
+    </div>
+</div>
+
+<script>
+    document.getElementById('sendBtn').addEventListener('click', function() {
+      const userInput = document.getElementById('userInput').value;
+      const data = { query: userInput };
+
+      const url = 'http://localhost:8080/api/run-sql';
+
+      document.getElementById('loadingSpinner').style.display = 'block';
+
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      })
+      .then(response => response.text())
+      .then(text => {
+        document.getElementById('serverResponse').textContent = text;
+      })
+      .catch(error => {
+        document.getElementById('serverResponse').textContent = 'Error: ' + error;
+      })
+      .finally(() => {
+        document.getElementById('loadingSpinner').style.display = 'none';
+      });
+    });
+</script>
+</body>
+</html>
