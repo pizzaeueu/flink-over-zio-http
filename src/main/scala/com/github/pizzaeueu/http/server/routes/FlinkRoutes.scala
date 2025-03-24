@@ -1,7 +1,7 @@
 package com.github.pizzaeueu.http.server.routes
 
 import com.github.pizzaeueu.codec.FlinkCodec
-import com.github.pizzaeueu.domain.{FlinkJobResult, SqlRequest}
+import com.github.pizzaeueu.domain.{FlinkJobResult, JobSortOrder, SqlRequest}
 import com.github.pizzaeueu.http.server.HttpServerLive.ApiPath
 import com.github.pizzaeueu.service.FlinkSqlService
 import zio._
@@ -16,6 +16,8 @@ trait FlinkRoutes {
 final case class FlinkRoutesLive(service: FlinkSqlService)
     extends FlinkRoutes
     with FlinkCodec {
+
+  private val SortOrderParam = "sortOrder"
 
   private implicit val sqlRequestDecoder: JsonDecoder[SqlRequest] =
     DeriveJsonDecoder.gen[SqlRequest]
@@ -36,9 +38,10 @@ final case class FlinkRoutesLive(service: FlinkSqlService)
           response <- service.runSql(sqlRequest.sql)
         } yield Response.text(response.toJsonPretty)
       },
-      Method.GET / ApiPath / "jobs" -> handler {
+      Method.GET / ApiPath / "jobs" -> handler { (req: Request) =>
+        val sortOrder: JobSortOrder = sortOrderOrDefault(req.queryParameters)
         for {
-          queries <- service.loadJobs()
+          queries <- service.loadJobs(sortOrder)
           res = queries.toJsonPretty
         } yield Response.json(res)
       },
@@ -53,6 +56,14 @@ final case class FlinkRoutesLive(service: FlinkSqlService)
           } yield response
       }
     ).handleError(err => Response.internalServerError(err.getMessage))
+
+  private def sortOrderOrDefault(queryParams: QueryParams) =
+    if (
+      queryParams.map.exists { case (key, value) =>
+        key == SortOrderParam && value.exists(_ == JobSortOrder.Desc.code)
+      }
+    ) JobSortOrder.Desc
+    else JobSortOrder.Asc
 }
 
 object FlinkRoutesLive {

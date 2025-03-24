@@ -2,6 +2,7 @@ package com.github.pizzaeueu.service
 
 import com.github.pizzaeueu.domain.{
   FlinkJobResult,
+  JobSortOrder,
   Session,
   Statement,
   StatementStatus
@@ -15,7 +16,7 @@ import java.util.UUID
 
 trait FlinkSqlService {
   def runSql(sql: String): Task[Json]
-  def loadJobs(): Task[List[FlinkJobResult]]
+  def loadJobs(sortOrder: JobSortOrder): Task[List[FlinkJobResult]]
   def loadJobsById(jobId: String): Task[Option[FlinkJobResult]]
 }
 
@@ -23,6 +24,9 @@ case class FlinkSqlServiceLive(
     flinkClient: FlinkSqlClient,
     flinkJobRepository: FlinkJobRepository
 ) extends FlinkSqlService {
+
+  private implicit val jobOrdering: Ordering[FlinkJobResult] =
+    Ordering.by(_.jobId)
 
   override def runSql(sql: String): Task[Json] = for {
     session <- flinkClient.createSession
@@ -35,11 +39,20 @@ case class FlinkSqlServiceLive(
     _ <- flinkJobRepository.saveJob(flinkJobResult)
   } yield jobResult
 
-  override def loadJobs(): Task[List[FlinkJobResult]] =
-    flinkJobRepository.loadJobs
+  override def loadJobs(
+      sortOrder: JobSortOrder
+  ): Task[List[FlinkJobResult]] = {
+    flinkJobRepository.loadJobs.map { jobs =>
+      sortOrder match {
+        case JobSortOrder.Asc => jobs.sorted
+        case _                => jobs.sorted.reverse
+      }
+
+    }
+  }
 
   override def loadJobsById(jobId: String): Task[Option[FlinkJobResult]] =
-    loadJobs().map(_.find(_.jobId == jobId))
+    loadJobs(JobSortOrder.Asc).map(_.find(_.jobId == jobId))
 
   private def pingUntilFlinkJobSucceed(
       session: Session,
