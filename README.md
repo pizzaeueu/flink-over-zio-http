@@ -31,6 +31,9 @@ SELECT 1 AS id, 'test' AS name;
 
 - Use `application.conf` file to configure application
 - run `sbt fmt` command to format code\
+- run `sbt test` to run test
+
+Application has in-memory persistence layer, so data will be lost after the restart
 
 Project was implemented using **JDK 17**
 
