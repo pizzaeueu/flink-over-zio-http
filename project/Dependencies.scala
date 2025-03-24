@@ -8,6 +8,7 @@ object VersionOf {
   val logback = "1.5.18"
   val `zio-config` = "4.0.4"
   val `zio-schema` = "1.6.6"
+  val `zio-test` = "2.1.16"
 
 }
 object ZIO {
@@ -37,4 +38,13 @@ object Logging {
   val logback = "ch.qos.logback" % "logback-classic" % VersionOf.logback
 
   val all: Seq[ModuleID] = Seq(slf4jApi, logback)
+}
+
+object Testing {
+  val zioTest = "dev.zio" %% "zio-test" % VersionOf.`zio-test` % Test
+  val zioTestSbt = "dev.zio" %% "zio-test-sbt" % VersionOf.`zio-test` % Test
+  val zioTestMagnolia =
+    "dev.zio" %% "zio-test-magnolia" % VersionOf.`zio-test` % Test
+
+  val all: Seq[ModuleID] = Seq(zioTest, zioTestSbt, zioTestMagnolia)
 }
