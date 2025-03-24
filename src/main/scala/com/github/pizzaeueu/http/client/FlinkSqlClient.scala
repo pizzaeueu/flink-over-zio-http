@@ -19,13 +19,13 @@ import scala.language.postfixOps
 
 trait FlinkSqlClient {
   def createSession: Task[Session]
-  def createStatement(sessionId: Session, query: String): Task[Statement]
+  def createStatement(sessionId: Session, sql: String): Task[Statement]
   def getStatementStatus(
       session: Session,
       statement: Statement
   ): Task[StatementStatus]
 
-  def getQueryResult(session: Session, statement: Statement): Task[Json]
+  def getJobResult(session: Session, statement: Statement): Task[Json]
 }
 
 case class FlinkSqlClientLive(config: AppConfig, client: Client)
@@ -45,7 +45,7 @@ case class FlinkSqlClientLive(config: AppConfig, client: Client)
 
   override def createStatement(
       session: Session,
-      query: String
+      sql: String
   ): Task[Statement] = {
     for {
       url <- ZIO.fromEither(
@@ -53,7 +53,7 @@ case class FlinkSqlClientLive(config: AppConfig, client: Client)
           s"${config.flink.host}:${config.flink.port}/v1/sessions/${session.sessionHandle}/statements"
         )
       )
-      createStatement = CreateStatement(query)
+      createStatement = CreateStatement(sql)
       res <- client.batched(Request.post(url, Body.from(createStatement)))
       statement <- res.body.to[Statement]
       _ <- ZIO.logInfo(s"Statement is created - $statement")
@@ -76,7 +76,7 @@ case class FlinkSqlClientLive(config: AppConfig, client: Client)
     )
   } yield data
 
-  override def getQueryResult(
+  override def getJobResult(
       session: Session,
       statement: Statement
   ): Task[Json] = {

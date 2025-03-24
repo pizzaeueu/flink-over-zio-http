@@ -10,18 +10,18 @@
           max-height: 300px;
           overflow-y: auto;
         }
-        #loadingSpinner, #queryResultSpinner {
+        #loadingSpinner, #jobResultSpinner {
           display: none;
         }
-        #queryList {
+        #jobList {
           max-height: 300px;
           overflow-y: auto;
           cursor: pointer;
         }
-        #queryList .list-group-item:hover {
+        #jobList .list-group-item:hover {
           background-color: #f8f9fa;
         }
-        #queryResult {
+        #jobResult {
           max-height: 300px;
           overflow-y: auto;
           display: none;
@@ -29,6 +29,9 @@
         .job-id {
           word-break: break-all;
           font-size: 0.9rem;
+        }
+        .error-message {
+          color: #dc3545;
         }
     </style>
 </head>
@@ -38,6 +41,7 @@
     <div class="form-group">
         <label for="userInput">Write valid SQL query</label>
         <input type="text" id="userInput" class="form-control" placeholder="sql query">
+        <small id="sqlError" class="error-message" style="display: none;">Please enter an SQL query</small>
     </div>
     <button id="sendBtn" class="btn btn-primary">Run SQL</button>
 
@@ -55,30 +59,38 @@
     <div class="row mt-4">
         <div class="col-md-6">
             <div class="d-flex justify-content-between align-items-center mb-2">
-                <h4>Available Queries:</h4>
+                <h4>Available Jobs:</h4>
                 <button id="refreshBtn" class="btn btn-outline-secondary btn-sm">Refresh</button>
             </div>
-            <div id="queryList" class="list-group border p-0"></div>
+            <div id="jobList" class="list-group border p-0"></div>
         </div>
         <div class="col-md-6">
-            <h4>Query Result:</h4>
-            <div id="queryResultSpinner" class="text-center my-3">
+            <h4>Job Result:</h4>
+            <div id="jobResultSpinner" class="text-center my-3">
                 <div class="spinner-border" role="status">
                     <span class="sr-only">Loading...</span>
                 </div>
             </div>
-            <pre id="queryResult" class="border p-3 bg-light"></pre>
+            <pre id="jobResult" class="border p-3 bg-light"></pre>
         </div>
     </div>
 </div>
 
 <script>
     $(document).ready(function() {
-        loadQueries();
+        loadJobs();
 
         $('#sendBtn').click(function() {
-            const userInput = $('#userInput').val();
-            const data = { query: userInput };
+            const userInput = $('#userInput').val().trim();
+
+            if (!userInput) {
+                $('#sqlError').show();
+                return;
+            }
+
+            $('#sqlError').hide();
+
+            const data = { sql: userInput };
 
             const url = 'http://localhost:8080/api/run-sql';
 
@@ -89,12 +101,13 @@
                 type: 'POST',
                 contentType: 'application/json',
                 data: JSON.stringify(data),
-                success: function(queryId) {
-                    $('#serverResponse').text(`Created Query Id - ${queryId}`);
-                    loadQueries();
+                success: function(jobId) {
+                    $('#serverResponse').text(`${jobId}`);
+                    loadJobs();
                 },
                 error: function(error) {
-                    $('#serverResponse').text('Error: ' + error.responseText || error.statusText);
+                    console.error('Error details:', error);
+                    $('#serverResponse').text('Error: ' + (error.responseText || error.statusText || 'Failed to execute SQL query'));
                 },
                 complete: function() {
                     $('#loadingSpinner').hide();
@@ -102,76 +115,80 @@
             });
         });
 
-        $('#refreshBtn').click(function() {
-            loadQueries();
+        $('#userInput').on('input', function() {
+            $('#sqlError').hide();
         });
 
-        $(document).on('click', '.query-item', function() {
-            const queryId = $(this).data('jobid');
-            loadQueryResult(queryId);
+        $('#refreshBtn').click(function() {
+            loadJobs();
+        });
+
+        $(document).on('click', '.job-item', function() {
+            const jobId = $(this).data('jobid');
+            loadJobResult(jobId);
         });
     });
 
-    function loadQueries() {
-        const url = 'http://localhost:8080/api/queries';
+    function loadJobs() {
+        const url = 'http://localhost:8080/api/jobs';
 
         $.ajax({
             url: url,
             type: 'GET',
             dataType: 'json',
             success: function(data) {
-                updateQueryList(data);
+                updateJobList(data);
             },
             error: function(error) {
-                $('#queryList').html('<div class="list-group-item text-danger">Failed to load queries</div>');
-                console.error('Error loading queries:', error);
+                $('#jobList').html('<div class="list-group-item text-danger">Failed to load jobs</div>');
+                console.error('Error loading jobs:', error);
             }
         });
     }
 
-    function updateQueryList(queries) {
-        $('#queryList').empty();
+    function updateJobList(jobs) {
+        $('#jobList').empty();
 
-        if (!queries || queries.length === 0) {
-            $('#queryList').html('<div class="list-group-item text-muted">No queries available</div>');
+        if (!jobs || jobs.length === 0) {
+            $('#jobList').html('<div class="list-group-item text-muted">No jobs available</div>');
             return;
         }
 
-        $.each(queries, function(index, query) {
-            if (query && query.jobId) {
-                const jobId = query.jobId;
-                $('#queryList').append(
-                    `<div class="list-group-item query-item" data-jobid="${jobId}">
+        $.each(jobs, function(index, job) {
+            if (job && job.jobId) {
+                const jobId = job.jobId;
+                $('#jobList').append(
+                    `<div class="list-group-item job-item" data-jobid="${jobId}">
                         <span class="job-id">${jobId}</span>
                     </div>`
                 );
             }
         });
 
-        if ($('#queryList').children().length === 0) {
-            $('#queryList').html('<div class="list-group-item text-muted">No valid queries found</div>');
+        if ($('#jobList').children().length === 0) {
+            $('#jobList').html('<div class="list-group-item text-muted">No valid jobs found</div>');
         }
     }
 
-    function loadQueryResult(queryId) {
-        const url = `http://localhost:8080/api/queries/${queryId}`;
+    function loadJobResult(jobId) {
+        const url = `http://localhost:8080/api/jobs/${jobId}`;
 
-        $('#queryResultSpinner').show();
-        $('#queryResult').hide();
+        $('#jobResultSpinner').show();
+        $('#jobResult').hide();
 
         $.ajax({
             url: url,
             type: 'GET',
             success: function(data) {
-                $('#queryResult').text(typeof data === 'object' ? JSON.stringify(data, null, 2) : data);
-                $('#queryResult').show();
+                $('#jobResult').text(typeof data === 'object' ? JSON.stringify(data, null, 2) : data);
+                $('#jobResult').show();
             },
             error: function(error) {
-                $('#queryResult').text('Error loading result: ' + (error.responseText || error.statusText));
-                $('#queryResult').show();
+                $('#jobResult').text('Error loading result: ' + (error.responseText || error.statusText));
+                $('#jobResult').show();
             },
             complete: function() {
-                $('#queryResultSpinner').hide();
+                $('#jobResultSpinner').hide();
             }
         });
     }

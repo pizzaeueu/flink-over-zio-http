@@ -1,3 +1,3 @@
 package com.github.pizzaeueu.domain
 
-case class SqlRequest(query: String)
+case class SqlRequest(sql: String)
